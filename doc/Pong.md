@@ -25,6 +25,6 @@ TODO:
 - [ ] Menu (options)
 
 ## Nice-to-have
-- [ ] Intensify collision sound based on ball speed 
+- [x] Intensify collision sound based on ball speed 
 ## To fix
 - [ ] Aspect ratio is not respected (although game will play the same)
