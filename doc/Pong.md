@@ -9,18 +9,18 @@ TODO:
 - [x] Arena
 	- [x] Player collision
 	- [x] Player wall collision sound
-- [ ] Ball (movement, collision, goal, sounds)
+- [x] Ball (movement, collision, goal, sounds)
 	- [x] Ball square
 	- [x] Ball move
 	- [x] Ball arena collision
 	- [x] Ball player collision
-	- [ ] Ball goal (despawn)
-	- [ ] Ball goal sound
-	- [ ] Ball wait and respawn
+	- [x] Ball goal (despawn)
+	- [x] Ball goal sound
+	- [x] Ball wait and respawn
 - [ ] Score
-	- [ ] Display score on each side
-	- [ ] Win at 10
-	- [ ] Win/loose sound
+	- [x] Display score on each side
+	- [x] Win at 10
+	- [x] Win/loose sound
 	- [ ] Display win screen
 - [ ] Menu (options)
 
