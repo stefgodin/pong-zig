@@ -194,8 +194,12 @@ pub fn main() !void {
     defer rl.unloadRenderTexture(game_tex);
     // Invert height to reinvert when drawing texture (weird stuff)
     const game_tex_rec: rl.Rectangle = .{ .height = @floatFromInt(-game_tex.texture.height), .width = @floatFromInt(game_tex.texture.width), .x = 0, .y = 0 };
+    while (!rl.isWindowReady() or !rl.isAudioDeviceReady()) {
+        std.time.sleep(250000);
+    }
 
     while (!rl.windowShouldClose()) {
+
         // Update
         gs.t = rl.getTime();
         gs.dt = rl.getFrameTime();
@@ -389,17 +393,22 @@ fn updatePlay(gs: *GameState) !void {
     if (p_collided) {
         gs.round_state.ball.collided = true;
         gs.round_state.hit_count += 1;
+        if (!already_collided) {
+            rl.setSoundPitch(gs.sounds.hit[0], 1.0 + (0.05 * @as(f32, @floatFromInt(gs.round_state.hit_count))));
+            rl.playSound(gs.sounds.hit[0]);
+        }
     } else if (gs.round_state.ball.rect.y == gs.arena_rect.y or gs.round_state.ball.rect.y == ((gs.arena_rect.y + gs.arena_rect.height) - gs.round_state.ball.rect.height)) {
         gs.round_state.ball.collided = true;
         gs.round_state.ball.direction.y *= -1;
+        if (!already_collided) {
+            rl.setSoundPitch(gs.sounds.hit[2], 1.0 + (0.05 * @as(f32, @floatFromInt(gs.round_state.hit_count))));
+            rl.playSound(gs.sounds.hit[2]);
+        }
     } else {
         gs.round_state.ball.collided = false;
     }
 
-    if (!already_collided and gs.round_state.ball.collided) {
-        rl.setSoundPitch(gs.sounds.hit[0], 1.0 + (0.05 * @as(f32, @floatFromInt(gs.round_state.hit_count))));
-        rl.playSound(gs.sounds.hit[0]);
-    }
+    if (!already_collided and gs.round_state.ball.collided) {}
 
     if (gs.round_state.ball.rect.x <= gs.arena_rect.x or gs.round_state.ball.rect.x >= (gs.arena_rect.x + gs.arena_rect.width)) {
         // Goal!
