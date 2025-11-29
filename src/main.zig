@@ -2,6 +2,7 @@ const std = @import("std");
 const math = std.math;
 const random = std.crypto.random;
 const rl = @import("raylib");
+const cast = @import("cast.zig").cast;
 
 const ROUND_MODE = enum {
     ROUND_START,
@@ -20,12 +21,12 @@ const Settings = struct {
 
     fn init() Settings {
         const s: Settings = .{
-            .win_h = 100,
-            .win_w = 200,
-            .ph = 16,
-            .pw = 4,
+            .win_h = 200,
+            .win_w = 400,
+            .ph = 32,
+            .pw = 8,
             .p_base_speed = 3, // Player height/s
-            .border_w = 2,
+            .border_w = 4,
         };
         return s;
     }
@@ -43,6 +44,7 @@ const Ball = struct {
     speed: f32,
     collided: bool,
     hidden: bool,
+    trail: [20]rl.Vector2,
 };
 const RoundState = struct {
     last_mode: ROUND_MODE,
@@ -59,10 +61,10 @@ const RoundState = struct {
             .mode = .ROUND_START,
             .p1 = .{
                 .rect = .{
-                    .x = @as(f32, @floatFromInt(s.border_w)) * 3,
+                    .x = cast(f32, s.border_w) * 3,
                     .y = 0,
-                    .width = @as(f32, @floatFromInt(s.pw)),
-                    .height = @as(f32, @floatFromInt(s.ph)),
+                    .width = cast(f32, s.pw),
+                    .height = cast(f32, s.ph),
                 },
                 .collided = false,
                 .speed = s.p_base_speed,
@@ -70,10 +72,10 @@ const RoundState = struct {
             },
             .p2 = .{
                 .rect = .{
-                    .x = @as(f32, @floatFromInt(s.win_w - (s.border_w * 3) - s.pw)),
+                    .x = cast(f32, s.win_w - (s.border_w * 3) - s.pw),
                     .y = 0,
-                    .width = @as(f32, @floatFromInt(s.pw)),
-                    .height = @as(f32, @floatFromInt(s.ph)),
+                    .width = cast(f32, s.pw),
+                    .height = cast(f32, s.ph),
                 },
                 .collided = false,
                 .speed = s.p_base_speed,
@@ -85,13 +87,14 @@ const RoundState = struct {
                 .rect = .{
                     .x = 0,
                     .y = 0,
-                    .width = @as(f32, @floatFromInt(s.pw)),
-                    .height = @as(f32, @floatFromInt(s.pw)),
+                    .width = cast(f32, s.pw),
+                    .height = cast(f32, s.pw),
                 },
                 .direction = rl.Vector2.zero(),
                 .speed = 0,
                 .collided = false,
                 .hidden = true,
+                .trail = .{rl.Vector2.zero()} ** 20,
             },
         };
 
@@ -110,6 +113,7 @@ const GameState = struct {
     mode: GAME_MODE,
     settings: Settings,
     sounds: Sounds,
+    shaders: Shaders,
     round_state: RoundState,
     arena_rect: rl.Rectangle,
     screen_rect: rl.Rectangle,
@@ -122,18 +126,19 @@ const GameState = struct {
             .mode = .MAIN_MENU,
             .settings = settings,
             .sounds = try Sounds.init(),
+            .shaders = try Shaders.init(),
             .round_state = RoundState.init(settings),
             .arena_rect = .{
-                .x = @as(f32, @floatFromInt(settings.border_w * 2)),
-                .y = @as(f32, @floatFromInt(settings.border_w * 2)),
-                .width = @as(f32, @floatFromInt(settings.win_w - (settings.border_w * 4))),
-                .height = @as(f32, @floatFromInt(settings.win_h - (settings.border_w * 4))),
+                .x = cast(f32, settings.border_w * 2),
+                .y = cast(f32, settings.border_w * 2),
+                .width = cast(f32, settings.win_w - (settings.border_w * 4)),
+                .height = cast(f32, settings.win_h - (settings.border_w * 4)),
             },
             .screen_rect = .{
                 .x = 0,
                 .y = 0,
-                .height = @floatFromInt(rl.getScreenHeight()),
-                .width = @floatFromInt(rl.getScreenWidth()),
+                .height = cast(f32, rl.getScreenHeight()),
+                .width = cast(f32, rl.getScreenWidth()),
             },
         };
         return gs;
@@ -171,6 +176,16 @@ const Sounds = struct {
         rl.unloadSound(self.white[0]);
         rl.unloadSound(self.white[1]);
         rl.unloadSound(self.decay_white);
+    }
+};
+
+const Shaders = struct {
+    trail: rl.Shader,
+
+    fn init() !Shaders {
+        return Shaders{
+            .trail = try rl.loadShader("", "assets/trail.fs"),
+        };
     }
 };
 
@@ -285,8 +300,8 @@ fn updateStart(gs: *GameState) !void {
     gs.round_state.ball.speed = 0;
 
     if ((gs.t - gs.round_state.mode_change_t) >= 1.5) {
-        const x: f32 = 1 - (@as(f32, @floatFromInt(random.intRangeAtMost(i32, 0, 1))) * 2);
-        const y: f32 = 1 - (@as(f32, @floatFromInt(random.intRangeAtMost(i32, 0, 1))) * 2);
+        const x: f32 = 1 - (cast(f32, random.intRangeAtMost(i32, 0, 1)) * 2);
+        const y: f32 = 1 - (cast(f32, random.intRangeAtMost(i32, 0, 1)) * 2);
         gs.round_state.ball.direction = .{ .x = x, .y = y };
         gs.round_state.ball.direction = gs.round_state.ball.direction.normalize();
         gs.round_state.ball.speed = gs.round_state.ball.rect.width * 15;
@@ -304,11 +319,11 @@ fn renderStart(gs: *GameState) !void {
     // Ball
     rl.drawRectangleRec(gs.round_state.ball.rect, .white);
 
-    const t_left: i32 = @min(@as(i32, @intFromFloat(4 - ((gs.t - gs.round_state.mode_change_t) * 2))), 3);
+    const t_left: i32 = @min(cast(i32, 4 - ((gs.t - gs.round_state.mode_change_t) * 2)), 3);
     var buf: [3]u8 = undefined;
     const t_left_txt = try std.fmt.bufPrintZ(&buf, "{}", .{t_left});
     const t_left_txt_size = rl.measureTextEx(try rl.getFontDefault(), t_left_txt, 16, 1);
-    rl.drawText(t_left_txt, @intFromFloat((gs.arena_rect.x + gs.arena_rect.width - t_left_txt_size.x) / 2), @intFromFloat((gs.arena_rect.y + gs.arena_rect.height - t_left_txt_size.y) / 4), 16, .white);
+    rl.drawText(t_left_txt, cast(i32, (gs.arena_rect.x + gs.arena_rect.width - t_left_txt_size.x) / 2), cast(i32, (gs.arena_rect.y + gs.arena_rect.height - t_left_txt_size.y) / 4), 16, .white);
 }
 
 fn updatePlay(gs: *GameState) !void {
@@ -394,14 +409,14 @@ fn updatePlay(gs: *GameState) !void {
         gs.round_state.ball.collided = true;
         gs.round_state.hit_count += 1;
         if (!already_collided) {
-            rl.setSoundPitch(gs.sounds.hit[0], 1.0 + (0.05 * @as(f32, @floatFromInt(gs.round_state.hit_count))));
+            rl.setSoundPitch(gs.sounds.hit[0], 1.0 + (0.05 * cast(f32, gs.round_state.hit_count)));
             rl.playSound(gs.sounds.hit[0]);
         }
     } else if (gs.round_state.ball.rect.y == gs.arena_rect.y or gs.round_state.ball.rect.y == ((gs.arena_rect.y + gs.arena_rect.height) - gs.round_state.ball.rect.height)) {
         gs.round_state.ball.collided = true;
         gs.round_state.ball.direction.y *= -1;
         if (!already_collided) {
-            rl.setSoundPitch(gs.sounds.hit[2], 1.0 + (0.05 * @as(f32, @floatFromInt(gs.round_state.hit_count))));
+            rl.setSoundPitch(gs.sounds.hit[2], 1.0 + (0.05 * cast(f32, gs.round_state.hit_count)));
             rl.playSound(gs.sounds.hit[2]);
         }
     } else {
@@ -443,25 +458,25 @@ fn drawArena(gs: *GameState) void {
     // Arena
     rl.drawRectangleRec(.{
         .x = gs.arena_rect.x,
-        .y = gs.arena_rect.y - @as(f32, @floatFromInt(gs.settings.border_w)),
+        .y = gs.arena_rect.y - cast(f32, gs.settings.border_w),
         .width = gs.arena_rect.width,
-        .height = @as(f32, @floatFromInt(gs.settings.border_w)),
+        .height = cast(f32, gs.settings.border_w),
     }, .white);
     rl.drawRectangleRec(.{
         .x = gs.arena_rect.x,
         .y = gs.arena_rect.y + gs.arena_rect.height,
         .width = gs.arena_rect.width,
-        .height = @as(f32, @floatFromInt(gs.settings.border_w)),
+        .height = cast(f32, gs.settings.border_w),
     }, .white);
 
     var i: f32 = 0;
-    const max_i: f32 = @floatFromInt(@divFloor(gs.settings.win_h, (gs.settings.border_w * 2)) - 2);
+    const max_i: f32 = cast(f32, @divFloor(gs.settings.win_h, (gs.settings.border_w * 2)) - 2);
     while (i < max_i) {
         rl.drawRectangleRec(.{
-            .x = (gs.arena_rect.x + gs.arena_rect.width - @as(f32, @floatFromInt(gs.settings.border_w))) / 2,
-            .y = gs.arena_rect.y + @as(f32, @floatFromInt(gs.settings.border_w)) * 2 * ((i + 1) - 0.75),
-            .width = @as(f32, @floatFromInt(gs.settings.border_w)),
-            .height = @as(f32, @floatFromInt(gs.settings.border_w)),
+            .x = (gs.arena_rect.x + gs.arena_rect.width - cast(f32, gs.settings.border_w)) / 2,
+            .y = gs.arena_rect.y + cast(f32, gs.settings.border_w) * 2 * ((i + 1) - 0.75),
+            .width = cast(f32, gs.settings.border_w),
+            .height = cast(f32, gs.settings.border_w),
         }, rl.Color.alpha(.white, 0.1));
         i += 1;
     }
@@ -478,10 +493,10 @@ fn renderScore(gs: *GameState) !void {
     var buf: [3]u8 = undefined;
     const p1_score_txt = try std.fmt.bufPrintZ(&buf, "{}", .{gs.round_state.p1.score});
     const p1_score_txt_size = rl.measureTextEx(try rl.getFontDefault(), p1_score_txt, 16, 1);
-    rl.drawText(p1_score_txt, @intFromFloat((gs.arena_rect.x + gs.arena_rect.width - p1_score_txt_size.x) / 4), @intFromFloat((gs.arena_rect.y + gs.arena_rect.height - p1_score_txt_size.y) / 4), 16, .white);
+    rl.drawText(p1_score_txt, cast(i32, (gs.arena_rect.x + gs.arena_rect.width - p1_score_txt_size.x) / 4), cast(i32, (gs.arena_rect.y + gs.arena_rect.height - p1_score_txt_size.y) / 4), 16, .white);
     const p2_score_txt = try std.fmt.bufPrintZ(&buf, "{}", .{gs.round_state.p2.score});
     const p2_score_txt_size = rl.measureTextEx(try rl.getFontDefault(), p2_score_txt, 16, 1);
-    rl.drawText(p2_score_txt, @intFromFloat((gs.arena_rect.x + gs.arena_rect.width - p2_score_txt_size.x) / 4 * 3), @intFromFloat((gs.arena_rect.y + gs.arena_rect.height - p2_score_txt_size.y) / 4), 16, .white);
+    rl.drawText(p2_score_txt, cast(i32, (gs.arena_rect.x + gs.arena_rect.width - p2_score_txt_size.x) / 4 * 3), cast(i32, (gs.arena_rect.y + gs.arena_rect.height - p2_score_txt_size.y) / 4), 16, .white);
 }
 
 fn updateEnd(gs: *GameState) !void {
