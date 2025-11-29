@@ -312,9 +312,9 @@ fn renderStart(gs: *GameState) !void {
 }
 
 fn updatePlay(gs: *GameState) !void {
-    if (rl.isKeyDown(rl.KeyboardKey.down)) {
+    if (rl.isKeyDown(rl.KeyboardKey.s)) {
         gs.round_state.p1.rect.y += gs.dt * gs.round_state.p1.speed * gs.round_state.p1.rect.height;
-    } else if (rl.isKeyDown(rl.KeyboardKey.up)) {
+    } else if (rl.isKeyDown(rl.KeyboardKey.w)) {
         gs.round_state.p1.rect.y -= gs.dt * gs.round_state.p1.speed * gs.round_state.p1.rect.height;
     }
 
@@ -329,9 +329,9 @@ fn updatePlay(gs: *GameState) !void {
         gs.round_state.p1.collided = false;
     }
 
-    if (rl.isKeyDown(rl.KeyboardKey.s)) {
+    if (rl.isKeyDown(rl.KeyboardKey.down)) {
         gs.round_state.p2.rect.y += gs.dt * gs.round_state.p2.speed * gs.round_state.p2.rect.height;
-    } else if (rl.isKeyDown(rl.KeyboardKey.w)) {
+    } else if (rl.isKeyDown(rl.KeyboardKey.up)) {
         gs.round_state.p2.rect.y -= gs.dt * gs.round_state.p2.speed * gs.round_state.p2.rect.height;
     }
 
